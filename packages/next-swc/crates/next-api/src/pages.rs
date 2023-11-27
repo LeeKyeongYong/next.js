@@ -572,7 +572,7 @@ impl PageEndpoint {
             bail!("expected an ECMAScript module asset");
         };
 
-        let Some(client_main_module) = *esm_resolve(
+        let client_main_module = esm_resolve(
             Vc::upcast(PlainResolveOrigin::new(
                 client_module_context,
                 this.pages_project
@@ -589,9 +589,7 @@ impl PageEndpoint {
         )
         .first_module()
         .await?
-        else {
-            bail!("expected next/dist/client/next-dev-turbopack.js to resolve to a module");
-        };
+        .context("expected next/dist/client/next-dev-turbopack.js to resolve to a module")?;
 
         let Some(client_main_module) =
             Vc::try_resolve_downcast_type::<EcmascriptModuleAsset>(client_main_module).await?
@@ -637,12 +635,10 @@ impl PageEndpoint {
     ) -> Result<Vc<SsrChunk>> {
         let this = self.await?;
 
-        let Some(ssr_module) = *module_context
+        let ssr_module = module_context
             .process(self.source(), reference_type.clone())
             .await?
-        else {
-            bail!("could not process page loader entry module");
-        };
+            .context("could not process page loader entry module")?;
 
         let config = parse_config_from_source(ssr_module).await?;
         let is_edge = matches!(config.runtime, NextRuntime::Edge);
@@ -660,9 +656,9 @@ impl PageEndpoint {
             );
 
             let mut evaluatable_assets = edge_runtime_entries.await?.clone_value();
-            let Some(evaluatable) = Vc::try_resolve_sidecast(ssr_module).await? else {
-                bail!("Entry module must be evaluatable");
-            };
+            let evaluatable = Vc::try_resolve_sidecast(ssr_module)
+                .await?
+                .context("Entry module must be evaluatable")?;
             evaluatable_assets.push(evaluatable);
 
             let edge_files = edge_chunking_context
