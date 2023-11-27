@@ -637,8 +637,7 @@ impl PageEndpoint {
 
         let ssr_module = module_context
             .process(self.source(), reference_type.clone())
-            .await?
-            .context("could not process page loader entry module")?;
+            .module();
 
         let config = parse_config_from_source(ssr_module).await?;
         let is_edge = matches!(config.runtime, NextRuntime::Edge);
